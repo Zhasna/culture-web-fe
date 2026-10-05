@@ -43,7 +43,7 @@ function AboutUsPage() {
             <Text style={subtitleTextStyle}>
               Kathakali is a classical dance-drama from Kerala, India, known for
               its vibrant costumes, intricate makeup, and elaborate facial
-              expressions. It combines dance, music, and acting to tell stories
+              expressions. It combines dance, music, and acting to tell tales
               from Indian epics like the Mahabharata and Ramayana.
             </Text>
             <a href="/cultures/kootiyattam" style={styleToken.cultureLinkTextStylePink}>
