@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Form, message, Typography, Flex } from 'antd';
 import { useAuth } from 'contexts/AuthContext';
 import Button from 'components/Common/Button';
+import { supabase } from 'configs/supabase.config';
 import { useStyleToken } from 'themeStyles';
 
 const { Title, Text } = Typography;
@@ -12,9 +13,38 @@ const ResetPasswordPage: React.FC = () => {
   const navigate = useNavigate();
   const styleToken = useStyleToken();
 
+  const [ready, setReady] = useState(false);
+  const [linkError, setLinkError] = useState<string | null>(null);
+  const [checked, setChecked] = useState(false);
+
+  
+  useEffect(() => {
+    const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+    if (hash.get('error')) {
+      setLinkError(hash.get('error_description') || 'This reset link is invalid or has expired.');
+      setChecked(true);
+      return;
+    }
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY' || session) {
+        setReady(true);
+        setChecked(true);
+      }
+    });
+
+    supabase.auth.getSession().then(({ data }) => {
+      if (data.session) setReady(true);
+      setChecked(true);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
   const handleSubmit = async (values: { password: string; confirmPassword: string }) => {
     try {
       await updateOwnPassword(values.password);
+      await supabase.auth.signOut();
       message.success('Password updated successfully. Please sign in again.');
       navigate('/sign-in');
     } catch (error) {
@@ -34,6 +64,22 @@ const ResetPasswordPage: React.FC = () => {
     transition: 'border-color 0.3s',
     backgroundColor: '#2b2d38',
   };
+
+  if (checked && !ready) {
+    return (
+      <Flex vertical align="center" style={{ minHeight: '70vh', padding: '2rem 0' }}>
+        <Title style={styleToken.pageHeadingTextStyle}>Reset link problem</Title>
+        <Text style={styleToken.subtitleTextStyle}>
+          {linkError || 'This reset link is invalid or has expired.'}
+        </Text>
+        <Text style={{ ...styleToken.subtitleTextStyle, marginTop: '1rem' }}>
+          <Link to="/sign-in" style={{ color: styleToken.colorPrimary }}>
+            Back to Sign In to request a new link
+          </Link>
+        </Text>
+      </Flex>
+    );
+  }
 
   return (
     <Flex vertical align="center" style={{ minHeight: '70vh', padding: '2rem 0' }}>
