@@ -541,14 +541,14 @@ const QuizPage: React.FC = () => {
       tag: 'AI Powered',
       icon: <ThunderboltOutlined />,
       variant: 'blue',
-      onStart: () => {
+      onStart: async () => {
         if (!isAuthenticated) {
           message.warning(
             'Please sign in to access the personalized Adaptive Quiz.',
           );
           return;
         }
-        generateAdaptiveQuiz();
+        await generateAdaptiveQuiz();
       },
       disabled: false,
       loading: loadingAdaptiveQuiz,
