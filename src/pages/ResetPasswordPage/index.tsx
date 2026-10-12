@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Form, message, Typography, Flex } from 'antd';
+import { Form, message, Typography, Flex, Spin } from 'antd';
 import { useAuth } from 'contexts/AuthContext';
 import Button from 'components/Common/Button';
 import { supabase } from 'configs/supabase.config';
@@ -14,14 +14,11 @@ const ResetPasswordPage: React.FC = () => {
   const styleToken = useStyleToken();
 
   const [ready, setReady] = useState(false);
-  const [linkError, setLinkError] = useState<string | null>(null);
   const [checked, setChecked] = useState(false);
 
-  
   useEffect(() => {
     const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''));
     if (hash.get('error')) {
-      setLinkError(hash.get('error_description') || 'This reset link is invalid or has expired.');
       setChecked(true);
       return;
     }
@@ -34,22 +31,34 @@ const ResetPasswordPage: React.FC = () => {
     });
 
     supabase.auth.getSession().then(({ data }) => {
-      if (data.session) setReady(true);
-      setChecked(true);
+      if (data.session) {
+        setReady(true);
+        setChecked(true);
+      }
     });
 
-    return () => subscription.unsubscribe();
+    const timeout = setTimeout(() => setChecked(true), 3000);
+
+    return () => {
+      subscription.unsubscribe();
+      clearTimeout(timeout);
+    };
   }, []);
 
   const handleSubmit = async (values: { password: string; confirmPassword: string }) => {
     try {
       await updateOwnPassword(values.password);
-      await supabase.auth.signOut();
-      message.success('Password updated successfully. Please sign in again.');
-      navigate('/sign-in');
     } catch (error) {
       message.error(error instanceof Error ? error.message : 'Failed to reset password');
+      return;
     }
+
+    try {
+      await supabase.auth.signOut();
+    } catch {
+    }
+    message.success('Password updated successfully. Please sign in again.');
+    navigate('/sign-in');
   };
 
   const inputStyle: React.CSSProperties = {
@@ -65,12 +74,19 @@ const ResetPasswordPage: React.FC = () => {
     backgroundColor: '#2b2d38',
   };
 
-  if (checked && !ready) {
+  if (!checked) {
+    return (
+      <Flex align="center" justify="center" style={{ minHeight: '70vh' }}>
+        <Spin size="large" />
+      </Flex>
+    );
+  }
+
+  if (!ready) {
     return (
       <Flex vertical align="center" style={{ minHeight: '70vh', padding: '2rem 0' }}>
-        <Title style={styleToken.pageHeadingTextStyle}>Reset link problem</Title>
         <Text style={styleToken.subtitleTextStyle}>
-          {linkError || 'This reset link is invalid or has expired.'}
+          This reset link is invalid or has expired.
         </Text>
         <Text style={{ ...styleToken.subtitleTextStyle, marginTop: '1rem' }}>
           <Link to="/sign-in" style={{ color: styleToken.colorPrimary }}>
